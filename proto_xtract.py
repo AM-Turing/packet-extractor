@@ -121,7 +121,7 @@ def snip_packets(args.file, args.protocol, args.mac):
                         packet[TCP].sport == 993 or
                         packet[TCP].dport == 143 or
                         packet[TCP].dport == 993
-                    )
+                    ):
                     snipped_packets.append(packet)
             elif args.protocol == "BOOTP":
                 if packet[Ether].src == args.mac or packet[Ether].dst == args.mac:
@@ -136,13 +136,51 @@ def snip_packets(args.file, args.protocol, args.mac):
                         packet[UDP].sport == 162 or
                         packet[UDP].dport == 161 or
                         packet[UDP].dport == 162
-                    )
+                    ):
                     snipped_packets.append(packet)
             elif args.protocol == "Telnet":
+                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                    if (
+                        packet[TCP].sport == 23 or
+                        packet[TCP].dport == 23
+                    ):
+                    snipped_packets.append(packet)
             elif args.protocol == "SSH":
+                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                    if (
+                        packet[TCP].sport == 22 or
+                        packet[TCP].dport == 22
+                    ):
+                    snipped_packets.append(packet)
             elif args.protocol == "NTP":
+                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                    if (
+                        packet[UDP].sport == 123 or
+                        packet[UDP].dport == 123
+                    ):
+                    snipped_packets.append(packet)
             elif args.protocol == "TFTP":
+                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                    if (
+                        packet[UDP].sport == 68 or
+                        packet[UDP].sport == 69 or
+                        packet[UDP].dport == 68 or
+                        packet[TCP].dport == 69
+                    ):
+                    snipped_packets.append(packet)
             elif args.protocol == "LDAP":
+                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                    if (
+                        packet[TCP].sport == 389 or
+                        packet[UDP].sport == 389 or
+                        packet[TCP].sport == 636 or
+                        packet[UDP].sport == 636 or
+                        packet[TCP].dport == 389 or
+                        packet[UDP].dport == 389 or
+                        packet[TCP].dport == 636 or
+                        packet[UDP].dport == 636 or
+                    ):
+                    snipped_packets.append(packet)
 return snipped_packets
 
 snipped = snip_packets(args.file, args.protocol, args.mac)
