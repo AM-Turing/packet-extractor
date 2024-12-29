@@ -57,145 +57,145 @@ def snip_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, po
 
     for packet in packets:
         if packet.haslayer(protocol_layer):
-            if protocol == "Ether":
-                if packet[Ether].src == mac or packet[Ether].dst == mac:
+            if protocol == "Ether" and ( mac and ( packet[Ether].src == mac or packet[Ether].dst == mac )):
+                snipped_packets.append(packet)
+            elif protocol == "ARP" and ( mac and ( packet[ARP].hwsrc == mac or packet[ARP].hwdst == mac )):
+                snipped_packets.append(packet)
+            elif protocol == "Dot11" and ( mac and ( packet[Dot11].addr1 == mac or packet[Dot11].addr2 == mac or packet[Dot11].addr3 == mac )):
+                snipped_packets.append(packet)
+            elif protocol == "IP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                snipped_packets.append(packet)
+            elif protocol == "IPv6" and (ipv6addr and ( packet[IPv6].src == ipv6addr or packet[IPv6].dst == ipv6addr )):
+                snipped_packets.append(packet)
+            elif protocol == "ICMP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                snipped_packets.append(packet)
+            elif protocol == "TCP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if port:
+                    if packet[TCP].sport == port or packet[TCP].dport == port:
+                        snipped_packets.append(packet)
+                else:
                     snipped_packets.append(packet)
-            elif protocol == "ARP":
-                if packet[ARP].hwsrc == mac or packet[ARP].hwdst == mac:
+            elif protocol == "UDP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if port:
+                    if packet[UDP].sport == port or packet[UDP].dport == port:
+                        snipped_packets.append(packet)
+                else:
                     snipped_packets.append(packet)
-            elif protocol == "Dot11":
+            elif protocol == "DNSQR" and (qname and ( packet[DNSQR].qname == qname)):
+                snipped_packets.append(packet)
+            elif protocol == "HTTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if packet[RAW].load.startswith(b"GET") or packet[RAW].load.startswith(b"POST"):
+                    snipped_packets.append(packet)
+                else:
+                    print(f"HTTP packet was neither GET or POST request.")
+            elif protocol == "FTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if packet[TCP].sport == 21 or packet[TCP].dport == 21:
+                    snipped_packets.append(packet)
+                else:
+                    print(f"FTP detected, but appeared to be on a non-standard port. Port: {packet[TCP].sport}")
+            elif protocol == "SMTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
                 if ( 
-                        packet[Dot11].addr1 == mac or
-                        packet[Dot11].addr2 == mac or
-                        packet[Dot11].addr3 == mac
-                    ):
-                    snipped_packets.append(packet)
-            elif protocol == "IP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    snipped_packets.append(packet)
-            elif protocol == "IPv6":
-                if packet[IPv6].src == ipv6addr or packet[IPv6].dst == ipv6addr:
-                    snipped_packets.append(packet)
-            elif protocol == "ICMP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    snipped_packets.append(packet)
-            elif protocol == "TCP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    snipped_packets.append(packet)
-                elif packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                            packet[TCP].sport == port or
-                            packet[UDP].sport == port or
-                            packet[TCP].dport == port or
-                            packet[UDP].dport == port
+                        packet[TCP].sport == 587 or
+                        packet[TCP].sport == 25 or 
+                        packet[TCP].sport == 465 or
+                        packet[TCP].sport == 2525 or
+                        packet[TCP].dport == 587 or
+                        packet[TCP].dport == 25 or
+                        packet[TCP].dport == 465 or
+                        packet[TCP].dport == 2525
                     ):
                         snipped_packets.append(packet)
-            elif protocol == "UDP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
+                else:
+                    print(f"SMTP detected, but appeard to be on a non-standard port. Port: {packet[TCP].sport}") 
+            elif protocol == "POP3" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[TCP].sport == 110 or
+                    packet[TCP].sport == 995 or
+                    packet[TCP].dport == 110 or
+                    packet[TCP].dport == 995
+                    ):
+                        snipped_packets.append(packet)
+                else:
+                    print(f"POP3 detected, but appeard to be on a non-standard port. Port: {packet[TCP].sport}") 
+            elif protocol == "IMAP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[TCP].sport == 143 or
+                    packet[TCP].sport == 993 or
+                    packet[TCP].dport == 143 or
+                    packet[TCP].dport == 993
+                ):
                     snipped_packets.append(packet)
-            elif protocol == "DNSQR":
-                if packet[DNSQR].qname == qname:
+                else:
+                    print(f"IMAP detected, but appeard to be on a non-standard port. Port: {packet[TCP].sport}") 
+            elif protocol == "BOOTP" and ( mac and ( packet[Ether].src == mac or packet[Ether].dst == mac )):
+                snipped_packets.append(packet)
+            elif protocol == "DHCP" and ( mac and ( packet[Ether].src == mac or packet[Ether].dst == mac )):
+                snipped_packets.append(packet)
+            elif protocol == "SNMP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[UDP].sport == 161 or
+                    packet[UDP].sport == 162 or
+                    packet[UDP].dport == 161 or
+                    packet[UDP].dport == 162
+                ):
                     snipped_packets.append(packet)
-            elif protocol == "HTTP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if packet[RAW].load.startswith(b"GET") or packet[RAW].load.startswith(b"POST"):
-                        snipped_packets.append(packet)
-            elif protocol == "FTP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if packet[TCP].sport == 21 or packet[TCP].dport == 21:
-                        snipped_packets.append(packet)
-            elif protocol == "SMTP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if ( 
-                            packet[TCP].sport == 587 or
-                            packet[TCP].sport == 25 or 
-                            packet[TCP].sport == 465 or
-                            packet[TCP].sport == 2525 or
-                            packet[TCP].dport == 587 or
-                            packet[TCP].dport == 25 or
-                            packet[TCP].dport == 465 or
-                            packet[TCP].dport == 2525
-                        ):
-                            snipped_packets.append(packet)
-            elif protocol == "POP3":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[TCP].sport == 110 or
-                        packet[TCP].sport == 995 or
-                        packet[TCP].dport == 110 or
-                        packet[TCP].dport == 995
-                        ):
-                            snipped_packets.append(packet)
-            elif protocol == "IMAP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[TCP].sport == 143 or
-                        packet[TCP].sport == 993 or
-                        packet[TCP].dport == 143 or
-                        packet[TCP].dport == 993
-                    ):
-                        snipped_packets.append(packet)
-            elif protocol == "BOOTP":
-                if packet[Ether].src == mac or packet[Ether].dst == mac:
+                else:
+                    print(f"SNMP detected, but appeard to be on a non-standard port. Port: {packet[UDP].sport}") 
+            elif protocol == "Telnet" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[TCP].sport == 23 or
+                    packet[TCP].dport == 23
+                ):
                     snipped_packets.append(packet)
-            elif protocol == "DHCP":
-                if packet[Ether].src == mac or packet[Ether].dst == mac:
+                else:
+                    print(f"Telnet detected, but appeard to be on a non-standard port. Port: {packet[TCP].sport}") 
+            elif protocol == "SSH" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[TCP].sport == 22 or
+                    packet[TCP].dport == 22
+                ):
                     snipped_packets.append(packet)
-            elif protocol == "SNMP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[UDP].sport == 161 or
-                        packet[UDP].sport == 162 or
-                        packet[UDP].dport == 161 or
-                        packet[UDP].dport == 162
-                    ):
-                        snipped_packets.append(packet)
-            elif protocol == "Telnet":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[TCP].sport == 23 or
-                        packet[TCP].dport == 23
-                    ):
-                        snipped_packets.append(packet)
-            elif protocol == "SSH":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[TCP].sport == 22 or
-                        packet[TCP].dport == 22
-                    ):
-                        snipped_packets.append(packet)
-            elif protocol == "NTP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[UDP].sport == 123 or
-                        packet[UDP].dport == 123
-                    ):
-                        snipped_packets.append(packet)
-            elif protocol == "TFTP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[UDP].sport == 68 or
-                        packet[UDP].sport == 69 or
-                        packet[UDP].dport == 68 or
-                        packet[TCP].dport == 69
-                    ):
-                        snipped_packets.append(packet)
-            elif protocol == "LDAP":
-                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
-                    if (
-                        packet[TCP].sport == 389 or
-                        packet[UDP].sport == 389 or
-                        packet[TCP].sport == 636 or
-                        packet[UDP].sport == 636 or
-                        packet[TCP].dport == 389 or
-                        packet[UDP].dport == 389 or
-                        packet[TCP].dport == 636 or
-                        packet[UDP].dport == 636 or
-                    ):
-                            snipped_packets.append(packet)
+                else:
+                    print(f"SSH detected, but appeard to be on a non-standard port. Port: {packet[TCP].sport}") 
+            elif protocol == "NTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[UDP].sport == 123 or
+                    packet[UDP].dport == 123
+                ):
+                    snipped_packets.append(packet)
+                else:
+                    print(f"NTP detected, but appeard to be on a non-standard port. Port: {packet[TCP].sport}") 
+            elif protocol == "TFTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[UDP].sport == 68 or
+                    packet[UDP].sport == 69 or
+                    packet[TCP].dport == 68 or
+                    packet[TCP].dport == 69
+                ):
+                    snipped_packets.append(packet)
+                elif packet[UDP].sport != 68 or packet[UDP].dport != 69:
+                    print(f"TFTP detected, but appeard to be on a non-standard port. Port: {packet[UDP].sport}") 
+                else:
+                    print(f"TFTP detected, but appeared to be on a non-standard port. Port: {packet[TCP].sport}")
+            elif protocol == "LDAP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
+                if (
+                    packet[TCP].sport == 389 or
+                    packet[UDP].sport == 389 or
+                    packet[TCP].sport == 636 or
+                    packet[UDP].sport == 636 or
+                    packet[TCP].dport == 389 or
+                    packet[UDP].dport == 389 or
+                    packet[TCP].dport == 636 or
+                    packet[UDP].dport == 636
+                ):
+                    snipped_packets.append(packet)
+                elif packet[UDP].sport != 389 or packet[UDP].sport != 636:
+                    print(f"LDAP detected, but appeard to be on a non-standard port. Port: {packet[UDP].sport}") 
+                else:
+                    print(f"LDAP detected, but appeared to be on a non-standard port. Port: {packet[TCP].sport}")
     return snipped_packets
 
-snipped = snip_packets(file, protocol, mac)
+snipped = snipped_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, port=None, qname=None):
 name = os.path.splitext(args.pcap_file)[0]
 if snipped:
     wrpcap("{name}_snipped.pcap", snipped)
@@ -207,6 +207,6 @@ else:
     # Test each packet and append to array
 #    if packet.addr1 != mac:
 #        return
-#    packets.append(packets)
+#    packets.append( packets)
 #sniff(offline = file, prn = strip_packet, filter=protocol)
 #wrpcap(name + "_snipped.pcap", packets)
