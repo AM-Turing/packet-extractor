@@ -45,6 +45,7 @@ def snip_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, po
         "NTP": "NTP",
         "TFTP": "TFTP",
         "LDAP": "LDAP",
+        "RAW": "RAW"
     }
 
     if protocol not in protocols_supported:
@@ -84,10 +85,11 @@ def snip_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, po
             elif protocol == "DNSQR" and (qname and ( packet[DNSQR].qname == qname)):
                 snipped_packets.append(packet)
             elif protocol == "HTTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
-                if packet[RAW].load.startswith(b"GET") or packet[RAW].load.startswith(b"POST"):
-                    snipped_packets.append(packet)
-                else:
-                    print(f"HTTP packet was neither GET or POST request.")
+                if packet.haslayer(RAW):
+                    if packet[RAW].load.startswith(b"GET") or packet[RAW].load.startswith(b"POST"):
+                        snipped_packets.append(packet)
+                    else:
+                        print("HTTP packet was neither GET or POST request.")
             elif protocol == "FTP" and ( ipv4addr and ( packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr )):
                 if packet[TCP].sport == 21 or packet[TCP].dport == 21:
                     snipped_packets.append(packet)
@@ -195,10 +197,10 @@ def snip_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, po
                     print(f"LDAP detected, but appeared to be on a non-standard port. Port: {packet[TCP].sport}")
     return snipped_packets
 
-snipped = snipped_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, port=None, qname=None):
-name = os.path.splitext(args.pcap_file)[0]
+snipped = snipped_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, port=None, qname=None)
 if snipped:
-    wrpcap("{name}_snipped.pcap", snipped)
+    name = os.path.splitext(args.pcap_file)[0]
+    wrpcap(f"{name}_snipped.pcap", snipped)
     print(f"Snipped packets saved to {name}_snipped.pcap")
 else:
     print("No packets related to the specified input and/or protocol identified.")
