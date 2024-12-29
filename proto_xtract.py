@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import os
+import sys
 from scapy.all import *
 
 parser = argparse.ArgumentParser(prog='proto_xtract.py', description='Extract all the packets')
 parser.add_argument('--version', '-v', action='version', version='%(prog)s 1.0')
-parser.add_argument('--file', '-f', type=ascii, required=True, help='Packet capture filename')
+parser.add_argument('--pcap_file', '-f', type=ascii, required=True, help='Packet capture filename')
 parser.add_argument('--mac', '-m', type=ascii, help='Target devices Mac address for Layer 2 protocols')
 parser.add_argument('--ipv4addr', '-ip', type=ascii, help='Target devices IPv4 address for Layer 3 protocols')
 parser.add_argument('--ipv6addr', '-ipv6', type=ascii, help='Target devices IPv6 address for Layer 3 protocols')
@@ -14,9 +15,12 @@ parser.add_argument('--qname', '-q', type=ascii, help='Target domain name for DN
 parser.add_argument('--protocol', '-r', type=ascii, required=True, help='Target protocol to parse')
 args = parser.parse_args()
 
-name = os.path.splitext(args.file)[0]
-def snip_packets(args.file, args.protocol, args.mac):
-    packets = rdpcap(args.file)
+def snip_packets(pcap_file, protocol, mac=None, ipv4addr=None, ipv6addr=None, port=None, qname=None):
+    try:
+        packets = rdpcap(pcap_file)
+    except Exception as e:
+        print(f"Error reading packet capture file: {e}")
+        sys.exit(1)
     snipped_packets = []
     protocols_supported = {
         "Ether": "Ether",
@@ -43,57 +47,65 @@ def snip_packets(args.file, args.protocol, args.mac):
         "LDAP": "LDAP",
     }
 
-    if args.protocol not in protocols_supported:
-        print(f"Protocol " + args.protocol + " is not supported.")
+    if protocol not in protocols_supported:
+        print(f"Protocol {protocol} is not supported.")
         print("\n")
         print("Protocols Supported: ", list(protocols_supported.values()))
-        exit(1)
+        sys.exit(1)
 
-    protocol_layer = protocols_supported[args.protocol]
+    protocol_layer = protocols_supported[protocol]
 
     for packet in packets:
         if packet.haslayer(protocol_layer):
-            if args.protocol == "Ether":
-                if packet[Ether].src == args.mac or packet[Ether].dst == args.mac:
+            if protocol == "Ether":
+                if packet[Ether].src == mac or packet[Ether].dst == mac:
                     snipped_packets.append(packet)
-            elif args.protocol == "ARP":
-                if packet[ARP].hwsrc == args.mac or packet[ARP].hwdst == args.mac:
+            elif protocol == "ARP":
+                if packet[ARP].hwsrc == mac or packet[ARP].hwdst == mac:
                     snipped_packets.append(packet)
-            elif args.protocol == "Dot11":
+            elif protocol == "Dot11":
                 if ( 
-                        packet[Dot11].addr1 == args.mac or
-                        packet[Dot11].addr2 == args.mac or
-                        packet[Dot11].addr3 == args.mac
+                        packet[Dot11].addr1 == mac or
+                        packet[Dot11].addr2 == mac or
+                        packet[Dot11].addr3 == mac
                     ):
                     snipped_packets.append(packet)
-            elif args.protocol == "IP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+            elif protocol == "IP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     snipped_packets.append(packet)
-            elif args.protocol == "IPv6":
-                if packet[IPv6].src == args.ipv6addr or packet[IPv6].dst == args.ipv6addr:
+            elif protocol == "IPv6":
+                if packet[IPv6].src == ipv6addr or packet[IPv6].dst == ipv6addr:
                     snipped_packets.append(packet)
-            elif args.protocol == "ICMP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+            elif protocol == "ICMP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     snipped_packets.append(packet)
-            elif args.protocol == "TCP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+            elif protocol == "TCP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     snipped_packets.append(packet)
-            elif args.protocol == "UDP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                elif packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
+                    if (
+                            packet[TCP].sport == port or
+                            packet[UDP].sport == port or
+                            packet[TCP].dport == port or
+                            packet[UDP].dport == port
+                    ):
+                        snipped_packets.append(packet)
+            elif protocol == "UDP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     snipped_packets.append(packet)
-            elif args.protocol == "DNSQR":
-                if packet[DNSQR].qname == args.qname:
+            elif protocol == "DNSQR":
+                if packet[DNSQR].qname == qname:
                     snipped_packets.append(packet)
-            elif args.protocol == "HTTP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+            elif protocol == "HTTP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if packet[RAW].load.startswith(b"GET") or packet[RAW].load.startswith(b"POST"):
-                    snipped_packets.append(packet)
-            elif args.protocol == "FTP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "FTP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if packet[TCP].sport == 21 or packet[TCP].dport == 21:
-                    snipped_packets.append(packet)
-            elif args.protocol == "SMTP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "SMTP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if ( 
                             packet[TCP].sport == 587 or
                             packet[TCP].sport == 25 or 
@@ -104,72 +116,72 @@ def snip_packets(args.file, args.protocol, args.mac):
                             packet[TCP].dport == 465 or
                             packet[TCP].dport == 2525
                         ):
-                        snipped_packets.append(packet)
-            elif args.protocol == "POP3":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                            snipped_packets.append(packet)
+            elif protocol == "POP3":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[TCP].sport == 110 or
                         packet[TCP].sport == 995 or
                         packet[TCP].dport == 110 or
                         packet[TCP].dport == 995
                         ):
-                        snipped_packets.append(packet)
-            elif args.protocol == "IMAP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                            snipped_packets.append(packet)
+            elif protocol == "IMAP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[TCP].sport == 143 or
                         packet[TCP].sport == 993 or
                         packet[TCP].dport == 143 or
                         packet[TCP].dport == 993
                     ):
+                        snipped_packets.append(packet)
+            elif protocol == "BOOTP":
+                if packet[Ether].src == mac or packet[Ether].dst == mac:
                     snipped_packets.append(packet)
-            elif args.protocol == "BOOTP":
-                if packet[Ether].src == args.mac or packet[Ether].dst == args.mac:
+            elif protocol == "DHCP":
+                if packet[Ether].src == mac or packet[Ether].dst == mac:
                     snipped_packets.append(packet)
-            elif args.protocol == "DHCP":
-                if packet[Ether].src == args.mac or packet[Ether].dst == args.mac:
-                    snipped_packets.append(packet)
-            elif args.protocol == "SNMP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+            elif protocol == "SNMP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[UDP].sport == 161 or
                         packet[UDP].sport == 162 or
                         packet[UDP].dport == 161 or
                         packet[UDP].dport == 162
                     ):
-                    snipped_packets.append(packet)
-            elif args.protocol == "Telnet":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "Telnet":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[TCP].sport == 23 or
                         packet[TCP].dport == 23
                     ):
-                    snipped_packets.append(packet)
-            elif args.protocol == "SSH":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "SSH":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[TCP].sport == 22 or
                         packet[TCP].dport == 22
                     ):
-                    snipped_packets.append(packet)
-            elif args.protocol == "NTP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "NTP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[UDP].sport == 123 or
                         packet[UDP].dport == 123
                     ):
-                    snipped_packets.append(packet)
-            elif args.protocol == "TFTP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "TFTP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[UDP].sport == 68 or
                         packet[UDP].sport == 69 or
                         packet[UDP].dport == 68 or
                         packet[TCP].dport == 69
                     ):
-                    snipped_packets.append(packet)
-            elif args.protocol == "LDAP":
-                if packet[IP].src == args.ipv4addr or packet[IP].dst == args.ipv4addr:
+                        snipped_packets.append(packet)
+            elif protocol == "LDAP":
+                if packet[IP].src == ipv4addr or packet[IP].dst == ipv4addr:
                     if (
                         packet[TCP].sport == 389 or
                         packet[UDP].sport == 389 or
@@ -180,20 +192,21 @@ def snip_packets(args.file, args.protocol, args.mac):
                         packet[TCP].dport == 636 or
                         packet[UDP].dport == 636 or
                     ):
-                    snipped_packets.append(packet)
-return snipped_packets
+                            snipped_packets.append(packet)
+    return snipped_packets
 
-snipped = snip_packets(args.file, args.protocol, args.mac)
+snipped = snip_packets(file, protocol, mac)
+name = os.path.splitext(args.pcap_file)[0]
 if snipped:
-    wrpcap(name + "_snipped.pcap", snipped)
-    print(f"Snipped packets saved to " name + "_snipped.pcap")
+    wrpcap("{name}_snipped.pcap", snipped)
+    print(f"Snipped packets saved to {name}_snipped.pcap")
 else:
-    print("No packets related to the specified MAC and protocol identified.")
+    print("No packets related to the specified input and/or protocol identified.")
 
 #def strip_packet(packet):
     # Test each packet and append to array
-#    if packet.addr1 != args.mac:
+#    if packet.addr1 != mac:
 #        return
 #    packets.append(packets)
-#sniff(offline = args.file, prn = strip_packet, filter=args.protocol)
+#sniff(offline = file, prn = strip_packet, filter=protocol)
 #wrpcap(name + "_snipped.pcap", packets)
