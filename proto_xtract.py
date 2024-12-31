@@ -310,11 +310,3 @@ if snipped:
     print(f"Snipped packets saved to {name}_{protocol}_snipped.pcap")
 else:
     print("No packets related to the specified input and/or protocol identified.")
-
-#def strip_packet(packet):
-    # Test each packet and append to array
-#    if packet.addr1 != mac:
-#        return
-#    packets.append( packets)
-#sniff(offline = file, prn = strip_packet, filter=protocol)
-#wrpcap(name + "_snipped.pcap", packets)
